@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Lobby Cast</title>
+		<script src="//www.gstatic.com/cast/sdk/libs/receiver/2.0.0/cast_receiver.js"></script>
+		<script src="//platform.twitter.com/widgets.js"></script>
+		<script src="lodash.min.js"></script>
+		<script type="text/javascript">
+			window.onload = function() {
+				var params = _getParams();
+				// console.log(params);
+				//window.mediaElement = document.getElementById('media');
+				//window.mediaManager = new cast.receiver.MediaManager(window.mediaElement);
+				window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+				if (!params.preview) {
+					window.castReceiverManager.start();
+				} else {
+					//Left
+					if (params.left) {
+						var lopts = _getParams(params.left_options, ",", "|");
+						_initWidget("left", params.left, lopts);
+					}
+					//Center
+					if (params.center) {
+						var copts = _getParams(params.center_options, ",", "|");
+						_initWidget("center", params.center, copts);
+					}
+					//Right
+					if (params.right) {
+						var ropts = _getParams(params.right_options, ",", "|");
+						_initWidget("right", params.right, ropts);
+					}
+				}
+				var timeDsp = new TimeDisplay();
+			}
+			function _getParams(str, sep, eq) {
+				str = str || document.location.search.replace(/^\?/, '');
+				sep = sep || "&";
+				eq = eq || "=";
+				var pairs = str.split(sep);
+				var params = {};
+				pairs.forEach(function(p) {
+					var pair = p.split(eq);
+					var k = decodeURIComponent(pair[0]);
+					var v = decodeURIComponent(pair[1]);
+					if (params[k]) {
+						if ( typeof params[k] === 'string') {
+							params[k] = [params[k]];
+						}
+						params[k].push(v);
+					} else {
+						params[k] = v;
+					}
+				});
+				return params;
+			}
+
+			function _initWidget(position, type, options) {
+				switch(type) {
+					case "twitter":
+						new TwitterWidget(position, options);
+						break;
+					case "message":
+						new MessageWidget(position, options);
+						break;
+					case "iframe":
+						new IFrameWidget(position, options);
+						break;
+				}
+			}
+
+			function TimeDisplay(el) {
+				var self = this;
+				var timeEl = el || document.getElementById('time');
+
+				function updateTime() {
+					timeEl.innerHTML = (new Date()).toLocaleTimeString()
+				}
+
+				updateTime();
+				var interval = window.setInterval(updateTime, 1000);
+			}
+
+			function TwitterWidget(position, options) {
+				self = this;
+				var el = document.getElementsByClassName(position)[0];
+				if (!el) {
+					return;
+				}
+				var widgetTmpl = "<a class=\"twitter-timeline\" data-dnt=\"true\" data-widget-id=\"{{WIDGET_ID}}\">Tweets</a>\n";
+				var widget = widgetTmpl.replace(/{{WIDGET_ID}}/, options.widget_id);
+				el.innerHTML = widget;
+				twttr.widgets.load();
+			}
+
+			function MessageWidget(position, options) {
+				self = this;
+				var el = document.getElementsByClassName(position)[0];
+				if (!el) {
+					return;
+				}
+				var str = "";
+				if (options.title) {
+					str += "<h1>" + _.escape(options.title) + "</h1>";
+				}
+				if (options.body) {
+					str += "<p>" + _.escape(options.body) + "</p>";
+				}
+				el.innerHTML = str;
+			}
+
+			function IFrameWidget(position, options) {
+				self = this;
+				var el = document.getElementsByClassName(position)[0];
+				if (!el) {
+					return;
+				}
+				var str = "";
+				if (options.url) {
+					str += "<iframe src=\"" + _.escape(options.url) + "\"></iframe>";
+				}
+				el.innerHTML = str;
+			}
+
+		</script>
+		<style type="text/css">
+			.flex-container {
+				display: flex;
+				flex-direction: row;
+				flex-wrap: nowrap;
+				justify-content: space-between;
+				align-items: stretch;
+				height: 100%;
+				width: 100%;
+			}
+			.flex-container > .flex-item {
+				flex-grow: 1;
+				/*flex-shrink: 1;*/
+			}
+			.flex-container > .flex-item.center {
+				flex-grow: 2;
+			}
+			.flex-item:empty {
+				display: none;
+			}
+			.flex-item > iframe {
+				width: 100% !important;
+				height: 100% !important;
+			}
+			.center {
+				text-align: center;
+			}
+			.left {
+				text-align: left;
+			}
+			.right {
+				text-align: right;
+			}
+
+			#time {
+				position: fixed;
+				right: 0;
+				bottom: 0;
+				margin: 1em;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="flex-container">
+			<div class="flex-item left"></div>
+			<div class="flex-item center"></div>
+			<div class="flex-item right"></div>
+		</div>
+		<div id="time"></div>
+		<img id="background" src="" />
+	</body>
+</html>
