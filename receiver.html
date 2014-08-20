@@ -99,13 +99,14 @@
 				if (!el) {
 					return;
 				}
-				var str = "";
+				var str = "<div class=\"flex-container vertical\">";
 				if (options.title) {
-					str += "<h1>" + _.escape(options.title) + "</h1>";
+					str += "<div class=\"flex-item\"><h1>" + _.escape(options.title) + "</h1></div>";
 				}
 				if (options.body) {
-					str += "<p>" + _.escape(options.body) + "</p>";
+					str += "<div class=\"flex-item\"><p>" + _.escape(options.body) + "</p></div>";
 				}
+				str += "</div>";
 				el.innerHTML = str;
 			}
 
@@ -124,6 +125,12 @@
 
 		</script>
 		<style type="text/css">
+			html, body {
+				height: 95vh;
+			}
+			body {
+				margin: 0px;
+			}
 			.flex-container {
 				display: flex;
 				flex-direction: row;
@@ -133,9 +140,18 @@
 				height: 100%;
 				width: 100%;
 			}
-			.flex-container > .flex-item {
+			.flex-container.vertical {
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+			}
+			body > .flex-container > .flex-item {
 				flex-grow: 1;
+				height: 100%;
 				/*flex-shrink: 1;*/
+			}
+			.flex-container.vertical > .flex-item {
+				height: auto;
 			}
 			.flex-container > .flex-item.center {
 				flex-grow: 2;
