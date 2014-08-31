@@ -27,6 +27,8 @@
           session = e;
           session.addUpdateListener(sessionUpdateListener);
           session.addMessageListener(message_nsp, messageHandler);
+          console.log(e);
+          sendConfig();
         }
         
         function receiverListener(e) {
@@ -47,6 +49,25 @@
         
         function startCast() {
           
+        }
+
+        function sendConfig() {
+          var conf = {
+            left: {
+              type: "twitter",
+              options: {
+                widget_id: 501472815405481984
+              }
+            },
+            center: {
+              type: "message",
+              options: {
+                title: "Development",
+                body: "Chicago, IL"
+              }
+            }
+          };
+          session.sendMessage(message_nsp, conf, function() {}, function() {});
         }
         
         window['__onGCastApiAvailable'] = function(loaded, err) {
