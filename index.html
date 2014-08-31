@@ -4,8 +4,16 @@
     <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
     <script>
+      if(typeof console === 'undefined' || typeof console.log === 'undefined') {
+        console = {
+          log: function(){};
+        };
+      }
+      
       (function($) {
         var castAppId = '4BCF9ABD';
+        var message_nsp = 'urn:x-cast:ianmccallcodes.lobycast';
+        var session = null;
         
         function initCastApi() {
           var sessionRequest = new chrome.cast.SessionRequest(castAppId);
@@ -15,14 +23,30 @@
           });
         }
         
-        function sessionListener() {
-          
+        function sessionListener(e) {
+          session = e;
+          session.addUpdateListener(sessionUpdateListener);
+          session.addMessageListener(message_nsp, messageHandler);
         }
         
         function receiverListener(e) {
           if(e === chrome.cast.ReceiverAvailability.AVAILABLE) {
             
           }
+        }
+        
+        function messageHandler(e) {
+          console.log(e);
+        }
+        
+        function sessionUpdateListener(isAlive) {
+          if(!isAlive) {
+            session = null;
+          }
+        }
+        
+        function startCast() {
+          
         }
         
         window['__onGCastApiAvailable'] = function(loaded, err) {
