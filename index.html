@@ -3,6 +3,8 @@
     <title>Lobby Cast</title>
     <script type="text/javascript" src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
     <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+    <script src="jquery.serializeHash.js"></script>
+    <script src="lodash.min.js"></script>
     <script>
       if(typeof console === 'undefined' || typeof console.log === 'undefined') {
         console = {
@@ -14,6 +16,12 @@
         var castAppId = '4BCF9ABD';
         var message_nsp = 'urn:x-cast:ianmccallcodes.lobycast';
         var session = null;
+        var selected_options = {};
+        var cast_icons = {
+          disabled: "cast_icons/ic_media_route_disabled_holo_light.png",
+          off: "cast_icons/ic_media_route_off_holo_light.png",
+          on: "cast_icons/ic_media_route_on_holo_light.png"
+        }
         
         function initCastApi() {
           var sessionRequest = new chrome.cast.SessionRequest(castAppId);
@@ -28,6 +36,7 @@
           session.addUpdateListener(sessionUpdateListener);
           session.addMessageListener(message_nsp, messageHandler);
           console.log(e);
+          $('#cast').attr('src',cast_icons.on);
           sendConfig();
         }
         
@@ -43,12 +52,21 @@
         
         function sessionUpdateListener(isAlive) {
           if(!isAlive) {
+            $('#cast').attr('src',cast_icons.off);
             session = null;
           }
         }
         
         function startCast() {
-          
+          if(session) {
+            session.stop(function() {
+              $('#cast').attr('src',cast_icons.off);
+            });
+          } else {
+            chrome.cast.requestSession(sessionListener, function(err) {
+              console.log(err);
+            });
+          }
         }
 
         function sendConfig() {
@@ -67,19 +85,255 @@
               }
             }
           };
-          session.sendMessage(message_nsp, conf, function() {}, function() {});
+          session.sendMessage(message_nsp, selected_options, function() {}, function() {});
         }
+        
+        function updateConfig(evt) {
+          //console.log(evt);
+          var target_li = $(evt.target).parents("div.flex-item li");
+          var section = $(evt.target).parents("div.flex-item").attr("data-section");
+          var option_div = target_li.children("div.options");
+          var type = target_li.children("input[type=radio]").val();
+          var options = $("input, textarea", option_div).serializeHash()
+          //console.log(options);
+          switch(type) {
+              case "twitter":
+                if(/^\d+$/.test(options.twitter_widget)) {
+                  options.widget_id = options.twitter_widget;
+                } else {
+                  var arr = /data-widget-id="(\d+)"/.exec(options.twitter_widget) || [null, null];
+                  options.widget_id = arr[1];
+                }
+                delete options.twitter_widget;
+              break;
+              case "message":
+              break;
+              case "iframe":
+              break;
+          }
+          selected_options[section] = {
+            type: type,
+            options: options
+          };
+          //console.log(selected_options);
+          updatePreview();
+        }
+        
+        function updatePreview() {
+          var preview_opts = {
+            preview: 1
+          };
+          if(selected_options.left && !/none/i.test(selected_options.left.type)) {
+            preview_opts.left = selected_options.left.type;
+            var opts = [];
+            _.forEach(selected_options.left.options, function(v,k) {
+              opts.push(k + "|" + encodeURIComponent(v))
+            });
+            preview_opts.left_options = opts.join(","); //encodeURIComponent(opts.join(","));
+          }
+          if(selected_options.center && !/none/i.test(selected_options.center.type)) {
+            preview_opts.center = selected_options.center.type;
+            var opts = [];
+            _.forEach(selected_options.center.options, function(v,k) {
+              opts.push(k + "|" + encodeURIComponent(v))
+            });
+            preview_opts.center_options = opts.join(","); //encodeURIComponent(opts.join(","));
+          }
+          if(selected_options.right && !/none/i.test(selected_options.right.type)) {
+            preview_opts.right = selected_options.right.type;
+            var opts = [];
+            _.forEach(selected_options.right.options, function(v,k) {
+              opts.push(k + "|" + encodeURIComponent(v))
+            });
+            preview_opts.right_options = opts.join(","); //encodeURIComponent(opts.join(","));
+          }
+          //console.log(preview_opts);
+          console.log(jQuery.param(preview_opts));
+          $("iframe#preview_frame").attr('src','receiver.html?' + jQuery.param(preview_opts));
+        }
+        
+        $(function() {
+          $("#cast").on("click", startCast);
+          $("input[type=radio]").on("change", updateConfig);
+          $("input[type=text], textarea").on("blur", updateConfig);
+        });
         
         window['__onGCastApiAvailable'] = function(loaded, err) {
           if(loaded) {
+            $('#cast').attr('src',cast_icons.off);
             initCastApi();
           }
         }
       })(jQuery);
     </script>
+    <style>
+      .preview > iframe {
+        width: 100%;
+        min-height: 500px;
+      }
+      .flex-container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        justify-content: space-around;
+        align-items: stretch;
+        /*height: 100%;*/
+        width: 100%;
+      }
+      .flex-container > .flex-item {
+        flex-grow: 1;
+        /*height: 100%;*/
+        /*flex-shrink: 1;*/
+        border-right: 1px solid black;
+      }
+      .flex-item:last {
+        border-right: none;
+      }
+      
+      ul.noBull {
+        list-style: none;
+        padding-left: 0;
+      }
+      
+      input[type=radio] ~ div.options  {
+        display: none;
+      }
+      
+      input[type=radio]:checked ~ div.options  {
+        display: block;
+      }
+    </style>
   </head>
   <body>
     <!--h1>Hello World</h1-->
-    <input type="button" id="cast" value="Cast">
+    <!--input type="button" id="cast" value="Cast"-->
+    <img src="cast_icons/ic_media_route_disabled_holo_light.png" id="cast">
+    <div class="preview">
+      <iframe id="preview_frame" src="./receiver.html?preview=1"></iframe>
+    </div>
+    <form>
+      <div class="flex-container">
+        <div class="left flex-item" data-section="left">
+          <h3 style="text-align:center;">Left</h3>
+          <ul class="noBull">
+            <li>
+              <input type="radio" name="left_widget" id="left_none" value="none" checked>
+              <label for="left_none">None</label>
+            </li>
+            <li>
+              <input type="radio" name="left_widget" id="left_twitter" value="twitter">
+              <label for="left_twitter">Twitter</label>
+              <div class="options">
+                <span>Widget:</span><br>
+                <textarea name="twitter_widget"></textarea>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="left_widget" id="left_message" value="message">
+              <label for="left_message">Message</label>
+              <div class="options">
+                <ul class="noBull">
+                  <li>
+                    <span>Title:</span> <input type="text" name="title">
+                  </li>
+                  <li>
+                    <span>Body:</span><br>
+                    <textarea name="body"></textarea>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="left_widget" id="left_iframe" value="iframe">
+              <label for="left_iframe">iFrame</label>
+              <div class="options">
+                <span>URL (must be https):</span>
+                <input type="text" name="url">
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="center flex-item" data-section="center">
+          <h3 style="text-align:center;">Center</h3>
+          <ul class="noBull">
+            <li>
+              <input type="radio" name="center_widget" id="center_none" value="none" checked>
+              <label for="center_none">None</label>
+            </li>
+            <li>
+              <input type="radio" name="center_widget" id="center_twitter" value="twitter">
+              <label for="center_twitter">Twitter</label>
+              <div class="options">
+                <span>Widget:</span><br>
+                <textarea name="twitter_widget"></textarea>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="center_widget" id="center_message" value="message">
+              <label for="center_message">Message</label>
+              <div class="options">
+                <ul class="noBull">
+                  <li>
+                    <span>Title:</span> <input type="text" name="title">
+                  </li>
+                  <li>
+                    <span>Body:</span><br>
+                    <textarea name="body"></textarea>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="center_widget" id="center_iframe" value="iframe">
+              <label for="center_iframe">iFrame</label>
+              <div class="options">
+                <span>URL (must be https):</span>
+                <input type="text" name="url">
+              </div>
+            </li>
+          </ul>
+        </div>
+        <div class="right flex-item" data-section="right">
+          <h3 style="text-align:center;">Right</h3>
+          <ul class="noBull">
+            <li>
+              <input type="radio" name="right_widget" id="right_none" value="none" checked>
+              <label for="right_none">None</label>
+            </li>
+            <li>
+              <input type="radio" name="right_widget" id="right_twitter" value="twitter">
+              <label for="right_twitter">Twitter</label>
+              <div class="options">
+                <span>Widget:</span><br>
+                <textarea name="twitter_widget"></textarea>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="right_widget" id="right_message" value="message">
+              <label for="right_message">Message</label>
+              <div class="options">
+                <ul class="noBull">
+                  <li>
+                    <span>Title:</span> <input type="text" name="title">
+                  </li>
+                  <li>
+                    <span>Body:</span><br>
+                    <textarea name="body"></textarea>
+                  </li>
+                </ul>
+              </div>
+            </li>
+            <li>
+              <input type="radio" name="right_widget" id="right_iframe" value="iframe">
+              <label for="right_iframe">iFrame</label>
+              <div class="options">
+                <span>URL (must be https):</span>
+                <input type="text" name="url">
+              </div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </form>
   </body>
 </html>

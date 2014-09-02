@@ -51,8 +51,8 @@
         window.customMessageBus = castReceiverManager.getCastMessageBus(message_nsp);
         castReceiverManager.onSenderConnected = function(evt) {
           console.log(evt.data);
-          var sender = JSON.parse(evt.data);
-          window.channel = window.customMessageBus.getCastChannel(sender.senderId);
+          //var sender = JSON.parse(evt.data);
+          window.channel = window.customMessageBus.getCastChannel(evt.data);
           window.channel.onMessage = handleCastMessage;
         }
         
@@ -61,15 +61,15 @@
       
       function handleCastMessage(evt) {
         console.log(evt.data);
-        var msg = JSON.parse(evt.data).message;
+        var msg = JSON.parse(evt.message);
         if(msg.left) {
           _initWidget("left", msg.left.type, msg.left.options);
         }
         if(msg.center) {
-          _initWidget("left", msg.center.type, msg.center.options);
+          _initWidget("center", msg.center.type, msg.center.options);
         }
         if(msg.right) {
-          _initWidget("left", msg.right.type, msg.right.options);
+          _initWidget("right", msg.right.type, msg.right.options);
         }
       }
 
@@ -114,7 +114,12 @@
         var timeEl = el || document.getElementById('time');
 
         function updateTime() {
-          timeEl.innerHTML = (new Date()).toLocaleTimeString()
+          // Noticed an issue where this was returning a time string that is an hour behind.
+          // It may be just mine, I'll need to check it on others.
+          //timeEl.innerHTML = (new Date()).toLocaleTimeString();
+          var dt = new Date();
+          dt.setHours(dt.getHours() + 1);
+          timeEl.innerHTML = dt.toLocaleTimeString();
         }
 
         updateTime();
